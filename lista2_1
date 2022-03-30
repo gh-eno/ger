@@ -1,0 +1,85 @@
+#install.packages("palmerpenguins")
+library(palmerpenguins)
+
+str(penguins)
+names(penguins)
+
+#install.packages("skimr")
+library(skimr)
+skim(penguins)
+
+#install.packages("ggplot2")
+library(ggplot2)
+ggplot(penguins, mapping = aes(x = species, y = body_mass_g, colour = species)) +
+  geom_boxplot(aes(fill = species), alpha= 0.2)+
+  geom_jitter(width = 0.2)+
+  geom_hline(aes(yintercept = mean(body_mass_g)), color = "black", size=0.7)+
+  ggtitle("Boxplot")
+
+# Modelo
+modelo = lm(body_mass_g~species, data = penguins)
+modelo
+
+## Call:
+lm(formula = body_mass_g ~ species, data = penguins)
+
+summary(modelo)
+
+anova(modelo)
+
+install.packages("mosaic")
+library(mosaic) # Plot TukeyHSD
+
+TukeyHSD(lm(body_mass_g~species, data = penguins))
+
+residuos<-residuals(modelo)
+
+ggplot(mapping = aes(x = residuos)) +   geom_density() +
+  xlab("Residuos") + ylab(" ") + xlim(-10,10)
+
+ggplot()+
+  geom_histogram(mapping=(aes(residuos)))
+
+#install.packages("ggfortify")
+library(ggfortify)
+autoplot(modelo, which = 2, label.size = 3)
+
+#install.packages("kableExtra")
+library(kableExtra)
+#install.packages("nortest")
+library(nortest)
+norm.test.stat = c(shapiro.test(modelo$residuals)$statistic, 
+                   ks.test(modelo$residuals, "pnorm")$statistic, 
+                   ad.test(modelo$residuals)$statistic, 
+                   cvm.test(modelo$residuals)$statistic)
+
+norm.test.pvalue = c(shapiro.test(modelo$residuals)$p.value, 
+                     ks.test(modelo$residuals, "pnorm")$p.value, 
+                     ad.test(modelo$residuals)$p.value, 
+                     cvm.test(modelo$residuals)$p.value)
+
+norm.test = cbind(norm.test.stat, norm.test.pvalue)
+
+rownames(norm.test) = c("Shapiro-Wilk", "Kolmogorov-Smirnov", 
+                        "Anderson-Darling", "Cramer-Von-Mises")
+colnames(norm.test) = c("Statistic", "P.value")
+
+kable(round(norm.test,3), align = "c", caption = "Testes de normalidade")
+
+ggplot(modelo, aes(.fitted, .resid))+
+  geom_point()+
+  stat_smooth(method="loess")+
+  geom_hline(yintercept=0, col="red", linetype="dashed")+
+  xlab("Valores ajustados")+ylab("Residuos")+
+  ggtitle("Residuos vs Ajustados")+
+  theme_bw()
+
+#install.packages("lmtest")
+library(lmtest)
+homo.test = cbind(bptest(modelo, studentize = FALSE)$statistic, 
+                  bptest(modelo, studentize = FALSE)$p.value)
+
+rownames(homo.test) = c("Breusch-Pagan")
+colnames(homo.test) = c("Statistic", "P.value")
+
+kable(homo.test, align = "c", caption = "Teste de homocedasticidade")
